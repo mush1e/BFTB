@@ -10,7 +10,7 @@
 #### **So how does TCP actually work?**
 - Essentially when communicating with a computer, you send packets of data 
 - Each packet has a sequence number (which packet is this?) and a checksum (is this packet corrupted?)
-- after receiving each packet the remote computer sends back an acknowledgement (like hey! I got packet 6 looks good!) 
+- after receiving each packet the remote computer sends back an acknowledgement (like hey! I got packet 6 looks good! wohoooo!!) 
 - If you don't get an acknowledgement, you resend the packet. Also if you get a corrupt packet acknowledgement you also resend it
 - This whole back and forth ensures all the information gets through in order
 
@@ -56,13 +56,54 @@
 - PS **`a Port is just a number between 0-65535`**
 - you cant just assign any port for any service you'd like btw. Some ports have special duties but this is out of our scope for now.
 
-| Service   | Port |
-|-----------|------|
-| HTTP      | 80   |
-| HTTPS     | 443  |
-| SSH       | 22   |
-| SMTP      | 25   |
-| DNS       | 53   |
-| FTP       | 21   |
-| Postgres  | 5432 |
+
+#### **Now lets implement something to demonstrate TCP/IP**
+- Okay so lets write a dumb program to kinda solidify our understanding of how to do this in go
+- first lets outline what were going to build! Were going to build a TCP/IP client and server
+- what the client does is send the server some text and gets back the same text capitalized
+- Simple enough right? lets get started. 
+- Now our code can run in 2 modes, client and server. They also probably need some port to send messages to and listen on respectively so lets kinda tackle this in our `main.go` file
+
+```go
+func main() {
+	mode := flag.String("m", "server", "set the mode to [server] or [client]")
+	port := flag.Int("p", 8080, "set the port to listen or query")
+	flag.Parse()
+
+	switch *mode {
+	case "server":
+		Server(*port)
+	case "client"
+		Client(*port)
+	}
+}
+```
+
+- `flag`'s  are just ways of taking command line arguments in go, so when you try to run our program you can specify what `mode` and `port` you run on / use
+
+```bash
+./basic-tcp-ip-example -m server -p 8080  # To run in server mode
+./basic-tcp-ip-example -p 8080 -m client  # To run in client mode
+```
+
+- ##### **Lets look at the server side code first**
+- so first lets write a function that takes the request coming in and sends back the text capitalized
+
+```go
+func generateResponse(writer io.Writer, reader io.Reader) {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		line := scanner.Text() 
+		fmt.Fprintf(writer, "%v\n", strings.ToUpper(line))
+	}
+	if scanner.Err() != nil {
+		log.Fatalln(scanner.Err())
+	}
+}
+```
+
+- lets break down this function so we can make sense of what's going on! 
+- we're defining a function called `generateResponse` that takes in a `io.Reader` and `io.Writer` interface
+- essentially any type that has a `Read` and `Write` function associated with it
+- We keep reading lines from `reader` and then capitalizing the line read and sending it back to `writer`
 
