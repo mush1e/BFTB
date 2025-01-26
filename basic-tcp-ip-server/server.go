@@ -16,7 +16,7 @@ func generateResponse(reader io.Reader, writer io.Writer) {
 		fmt.Fprintf(writer, "%v\n", strings.ToUpper(line))
 	}
 	if scanner.Err() != nil {
-		log.Fatalf(scanner.Err().Error())
+		log.Fatalln(scanner.Err())
 	}
 }
 
@@ -25,7 +25,7 @@ func Server(port int) {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalln(err.Error())
 	}
 	defer listener.Close()
 	log.Printf("listening at localhost: %s", listener.Addr())
