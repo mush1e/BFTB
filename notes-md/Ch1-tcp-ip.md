@@ -87,7 +87,8 @@ func main() {
 ./basic-tcp-ip-example -p 8080 -m client  # To run in client mode
 ```
 
-- ##### **Lets look at the server side code first**
+#### **Tackling the Server implementation first**
+
 - so first lets write a function that takes the request coming in and sends back the text capitalized
 
 ```go
@@ -102,7 +103,6 @@ func generateResponse(writer io.Writer, reader io.Reader) {
 	}
 }
 ```
-
 - lets break down this function so we can make sense of what's going on! 
 - we're defining a function called `generateResponse` that takes in a `io.Reader` and `io.Writer` interface
 - essentially any type that has a `Read` and `Write` function associated with it
@@ -134,3 +134,56 @@ func Server(port int) {
 
 - essentially we create try listening on `port` over `localhost`, handle errors if it doesnt work out, then just have a loop that keeps polling (fancy word for waiting) for connection requests.
 - once we do accept a connection and everything is okay we just spawn a `goroutine` to generate and send our response via `getResponse(conn, conn)` (`net.Conn` satisfies `io.Reader` and `io.Writer` since it implements a `Read` and `Write` function)
+
+#### **Onto the client**
+- Now the client isnt going to exactly be as straight forward as the server since essentially we're doing 2 separate things! 
+	- Sending out messages to the server
+	- Receiving responses from the server
+- Now we don't want either of these tasks to block each other, so again were going to rely on `goroutines`
+- Lets start implementing our client function
+
+```go
+func Client(port int) {
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
+	if err != nil {
+		log.Fatalf("unable to establish connection with server at : %d", port)
+	}
+	defer conn.Close() 
+	// listening and sending implementation
+}
+```
+
+- okay so far so good? we attempt to establish a connection to the server, do some error handling and just clean up conn after we're done 
+- Now on to the juicy stuff! lets start implementing our listener in a `goroutine` to listen for any response messages coming from the server and print them to `stdout`
+
+```go
+// Within our client function
+go func() {
+	for scanner := bufio.NewScanner(conn); scanner.Scan(); {
+		if err := scanner.Err(); err != nil {
+			log.Fatalf("error reading from %s: %v", conn.RemoteAddr(), err)
+		}
+		fmt.Printf("recieved from server - %q\n", scanner.Text())
+	}
+}()
+```
+
+- well we just kinda keep looping and waiting for our scanner to read something coming in over `conn`, once we get something, we just display it to the terminal
+- now for the sending part
+
+```go
+for scanner := bufio.NewScanner(os.Stdin); scanner.Scan(); {
+	fmt.Printf("sending over %q to the server\n", scanner.Text())
+	msg := scanner.Text() + '\n'
+	
+	if _, err := conn.Write([]byte(msg)); err != nil {
+		log.Printf("error writing to server: %v\n", err) 
+		 break 
+	}
+}
+if err := scanner.Err(); err != nil { 
+	log.Fatalf("error reading from stdin: %v\n", err) 
+}
+
+```
+
