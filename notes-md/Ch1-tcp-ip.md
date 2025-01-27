@@ -11,14 +11,15 @@
 - Essentially when communicating with a computer, you send packets of data 
 - Each packet has a sequence number (which packet is this?) and a checksum (is this packet corrupted?)
 - after receiving each packet the remote computer sends back an acknowledgement (like hey! I got packet 6 looks good! wohoooo!!) 
-- If you don't get an acknowledgement, you resend the packet. Also if you get a corrupt packet acknowledgement you also resend it
+- If you don't get an acknowledgement, you resend the packet.
+- If a packet is received with errors, it is discarded, and the sender eventually retransmits it.
 - This whole back and forth ensures all the information gets through in order
 
 
 #### **Okay now how does IP actually work?**
 - IP is a bit more complicated so were going to abstract it. essentially this explanation is inaccurate but you'll get the idea
 - Each computer has an `address`, which is an identifier that tells other computers how to get to it, this address is called an `IP Address`
-- They also have a list of other known computers on them. this list is called a `Routing Table`
+- They also have a list of known networks and the best next-hop addresses to reach them, contained in a `routing table`
 - When you try to send a message to another computer, your computer looks at the `Routing Table` to see if it knows how to get to that computer
 	- if it does, it sends the message to the next computer in the chain 
 	- otherwise, it sends the message to the next computer that might know how to get to the target
@@ -39,12 +40,12 @@
 	- `IPv4` a 32 bit number which could look like `DDD.DDD.DDD.DDD`, where DDD is a number between 0 and 255.
 	- `IPv6` a 128 bit number which could look like `XXXX:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX`, where XXXX is a 16-bit hexadecimal number; that is, each X is one of `0..=9` or `a..=f`
 
-| IP Address                     | Type  | Note                                                             |
-|---------------------------------|-------|------------------------------------------------------------------|
-| 192.168.000.001                 | IPv4  | Localhost; refers to hosting computer                            |
-| 192.168.0.1                     | IPv4  | Same as above; you can omit leading zeroes                       |
-| 0000:0000:0000:0000:0000:ffff:c0a8:0001 | IPv6  | Refers to the same computer as above; IPv4 addresses can be embedded in IPv6 by prefixing with `::ffff:` |
-| ::ffff:c0a8:0001                | IPv6  | Same as above; you can omit leading zeroes                       |
+| IP Address                              | Type | Note                                                                                                     |
+| --------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------- |
+| 192.168.000.001                         | IPv4 | private network IP address refers to hosting computer                                                    |
+| 192.168.0.1                             | IPv4 | Same as above; you can omit leading zeroes                                                               |
+| 0000:0000:0000:0000:0000:ffff:c0a8:0001 | IPv6 | Refers to the same computer as above; IPv4 addresses can be embedded in IPv6 by prefixing with `::ffff:` |
+| ::ffff:c0a8:0001                        | IPv6 | Same as above; you can omit leading zeroes                                                               |
 
 
 #### Understanding Ports: What Are They and Why Do They Matter?
@@ -73,7 +74,7 @@ func main() {
 	switch *mode {
 	case "server":
 		Server(*port)
-	case "client"
+	case "client":
 		Client(*port)
 	}
 }
@@ -107,3 +108,29 @@ func generateResponse(writer io.Writer, reader io.Reader) {
 - essentially any type that has a `Read` and `Write` function associated with it
 - We keep reading lines from `reader` and then capitalizing the line read and sending it back to `writer`
 
+- Alright lets write a function to actually handle the server stuff (what we're calling in our `main.go`)
+
+```go
+func Server(port int) {
+	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+	if err != nil {
+		log.Fatalf("error listening on port %d : %q", port, err)
+	} 
+	defer listener.Close() 
+	log.Printf("server listening at localhost on port : %d", port)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			panic(err)
+		}
+		
+		go func(c net.Conn) { 
+			defer c.Close() 
+			generateResponse(c, c) 
+		}(conn)
+	}
+}
+```
+
+- essentially we create try listening on `port` over `localhost`, handle errors if it doesnt work out, then just have a loop that keeps polling (fancy word for waiting) for connection requests.
+- once we do accept a connection and everything is okay we just spawn a `goroutine` to generate and send our response via `getResponse(conn, conn)` (`net.Conn` satisfies `io.Reader` and `io.Writer` since it implements a `Read` and `Write` function)
