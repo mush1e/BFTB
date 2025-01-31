@@ -187,3 +187,64 @@ if err := scanner.Err(); err != nil {
 
 ```
 
+
+- Now running our code in both modes we can see when we send some text from the client to the server, it gets echoed back in the client in upper case
+- Now this kind of approach works for local addresses but what if we wanna do something over the internet?
+- most of the time we only know the domain name w don't really know the `IP Address` we wanna connect to. So how do we tackle this? 
+
+
+
+#### Introducing DNS
+- A `DNS` or a `Domain Name Server` is essentially a big table mapping domain names to `IP Addresses` 
+- There are multiple DNS providers, your ISP usually provides you with one
+- Theres also public ones like the one offered by Google available on `4.4.4.4` and `8.8.8.8`
+- Browsers and other clients usually use this DNS to look up an address from a domain name
+- This is an example of how a DNS table might look like
+
+| domain        | last known ipv4 | last known ipv6          |
+| ------------- | --------------- | ------------------------ |
+| google.com    | 142.250.217.142 | 2607:f8b0:4007:801::200e |
+| eblog.fly.dev | 66.241.125.53   | 2a09:8280:1::37:6bbc     |
+
+#### Okay so how do we actually get an address from the DNS
+- lets say we wanna connect to some server, to do that we first needs its `IP Address`
+- we can use a built in command called `nslookup` on most major operating systems to query a DNS for an IP Address
+
+
+#### So lets tie this in with go
+- Now lets write a basic script that takes a command line argument (`<domain name>`) and gives out the `IPv4` and `IPv6` addresses
+
+```go
+func main() {
+	if (len(os.Args) != 2) {
+		log.Fatalf("expected 1 argument<hostname> got %d\n", len(os.Args) - 1)
+	}
+	host := os.Args[1]
+	ips, err := net.LookupIp(host)
+	if err != nil {
+		log.Fatalf("lookup ip for %q | err : %q", host, err)
+	}
+	if len(ips) == 0 {
+		log.Fatalf("could not find any ips for host : %q", host)
+	}
+
+	for _, ip := range ips {
+		if ip.To4() {
+			fmt.Println(ip)
+			goto IPV6
+		}
+	}
+	fmt.Println("ipv6 - none")
+IPV6:
+	for _, ip := range ips {
+		if ip.To4() == nil {
+			fmt.Println(ip)
+			return
+		}
+	}
+	fmt.Println("ipv6 - none")
+}
+```
+
+- This program tries to look up `IP Addresses` for a host provided via command line arguments, using the `DNS` and prints them out to the user 
+
