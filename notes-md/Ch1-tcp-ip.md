@@ -247,4 +247,61 @@ IPV6:
 ```
 
 - This program tries to look up `IP Addresses` for a host provided via command line arguments, using the `DNS` and prints them out to the user 
+- Here we use `net.LookupIp()` to help query the DNS to find all IPs associated with a domain 
+
+
+
+#### Now that we've looked at DNS and TCP lets put stuff together
+
+- Now we have pretty much most of the background we need to make requests over the internet
+- so lets talk about what actually happens when you try visiting a webpage from a browser
+	- You look up the `IP Address` associated with the domain name via the `DNS`
+	- Connects to the server at that `IP Address` hiding behind that `port`
+	- sends an `HTTP` request to the server
+- **So wait, what is HTTP?**
+	- `HTTP` stands for `hypertext transfer protocol`, this is essentially a text based messaging protocol for sending messages over the internet
+
+```http
+<METHOD> <PATH> <PROTOCOL/VERSION>
+Host: <host>
+[<HEADER>: <VALUE>]
+[<HEADER>: <VALUE>]
+[<HEADER>: <VALUE>] (these guys are optional)
+
+[<REQUEST BODY>] (this is also optional).
+```
+
+- Thats it! you're literally just sending text over TCP to another computer, that it parses and sends something back! 
+
+- Okay so giving a more concrete example, a basic `HTTP Request` would look like this
+
+```http
+GET /backendbasics.html HTTP/1.1
+Host: eblog.fly.dev
+```
+
+- So lets break this down, we can read this as
+	- `GET` the resource on `eblog.fly.dev` at the path `/backendbasics.html`
+	- use the `HTTP/1.1` protocol
+
+- The first line is called the **request line**, its split into 3 parts
+	- **METHOD** (Like `GET`, `POST`, `PUT`, `DELETE` etc)
+	- **PATH** signifies the location of the resource you want to access on the server
+	- **PROTOCOL/VERSION** signifies how the server should interpret the message being sent, its usually `HTTP/1.1` or `HTTP/2.0`
+
+- After that we have a list of **headers**, which are colon(:) separated key-value pairs, usually making suggestions to the server about how to interpret the request 
+- Headers are usually formatted as `Title-Case : lower-case` for example `Content-Type: application/json`
+- Here are examples of some common headers
+
+|header|description|example(s)|
+|---|---|---|
+|`Accept-Encoding`|I can accept responses encoded with these encodings|`gzip`, `deflate`|
+|`Accept`|the types of responses the client can accept|`text/html`|
+|`Cache-Control`|how the client wants the server to cache the response|`no-cache`|
+|`Content-Encoding`|my response body is encoded using:|`gzip`, `deflate`|
+|`Content-Length`|my body is N bytes long|47|
+|`Content-Type`|the type of the request body|`application/json`|
+|`Date`|the date and time of the request|`Tue, 17 Aug 2021 23:00:00 GMT`|
+|`Host`|the domain name of the server you’re trying to access|`eblog.fly.dev`|
+|`User-Agent`|the name and version of the client making the request|`curl/7.64.1`, `Mozilla/5.0 (Linux; Android 8.0.0; SM-G955U Build/R16NW)`|
 
